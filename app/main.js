@@ -11,6 +11,11 @@ const commandEnum = Object.freeze({
     GET: "get"
 })
 
+const optionEnum = Object.freeze({
+    EX: "ex",
+    PX: "px"
+})
+
 function parseRequest(requestBuffer) {
   const arrayHeaderEnd = requestBuffer.indexOf(TERMINATOR);
   const itemCount = Number(
@@ -49,8 +54,19 @@ const handleEcho = (args) => {
 }
 
 const handleSet = (args) => {
-    const [key, value] = args;
+    const [key, value, rawFlag, rawDuration] = args;
     const entry = { value };
+
+    if (args.length === 4) {
+        const flag = rawFlag.toLowerCase();
+        const duration = Number(rawDuration);
+        const durationMs = flag === optionEnum.EX ? duration * 1000 : duration;
+
+        entry.options = {
+            flag,
+            expiry: Date.now() + durationMs
+        };
+    }
 
     database.set(key, entry);
     return [simpleString("OK")];
@@ -59,7 +75,9 @@ const handleSet = (args) => {
 const handleGet = (args) =>{
     const [key] =  args;
     const item = database.get(key);
-    if (item === undefined) 
+    const expiry = item?.options?.expiry;
+    const hasExpired = Date.now() >= expiry;
+    if (item === undefined || hasExpired) 
     {
         return [NULL];
     }
