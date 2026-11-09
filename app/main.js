@@ -96,6 +96,8 @@ function handleCommand(rawCommand, args)
             return handleSet(args)
         case commandEnum.GET:
             return handleGet(args)
+        default:
+            return [`-ERR unknown command '${rawCommand}'`]
     }
 }
 
