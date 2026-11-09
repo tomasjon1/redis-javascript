@@ -1,10 +1,14 @@
 const net = require("net");
 
+const database = new Map();
 const TERMINATOR = "\r\n";
+const NULL = "$-1";
 
 const commandEnum = Object.freeze({
     PING: "ping",
-    ECHO: "echo"
+    ECHO: "echo",
+    SET: "set",
+    GET: "get"
 })
 
 function parseRequest(requestBuffer) {
@@ -44,6 +48,24 @@ const handleEcho = (args) => {
     return [`$${Buffer.byteLength(message)}`, message]
 }
 
+const handleSet = (args) => {
+    const [key, value] = args;
+    const entry = { value };
+
+    database.set(key, entry);
+    return [simpleString("OK")];
+};
+
+const handleGet = (args) =>{
+    const [key] =  args;
+    const item = database.get(key);
+    if (item === undefined) 
+    {
+        return [NULL];
+    }
+    return [`$${Buffer.byteLength(item.value)}`, item.value];
+}
+
 function handleCommand(rawCommand, args)
 {
     const command = rawCommand.toLowerCase();
@@ -52,6 +74,10 @@ function handleCommand(rawCommand, args)
            return handlePing();
         case commandEnum.ECHO:
             return handleEcho(args)
+        case commandEnum.SET:
+            return handleSet(args)
+        case commandEnum.GET:
+            return handleGet(args)
     }
 }
 
